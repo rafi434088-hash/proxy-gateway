@@ -1,0 +1,50 @@
+name: HTTP gateway proxy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 */5 * * *"   # a job lasts ~5h50m; the next one queues behind it
+
+concurrency:
+  group: gateway-proxy
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Download bore
+        run: |
+          curl -L -o bore.tgz https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz
+          tar xzf bore.tgz && chmod +x bore
+      - name: Start proxy (lite :1234, plain :1235)
+        env:
+          PROXY_AUTH: ${{ secrets.PROXY_AUTH }}
+        run: |
+          nohup python proxy.py > proxy.log 2>&1 &
+          sleep 3; cat proxy.log
+      - name: Open bore tunnels
+        run: |
+          nohup ./bore local 1234 --to bore.pub --port 1234 > bore1.log 2>&1 &
+          nohup ./bore local 1235 --to bore.pub --port 1235 > bore2.log 2>&1 &
+          sleep 6; cat bore1.log bore2.log
+          grep -q "bore.pub:1234" bore1.log || { echo "port 1234 not granted"; exit 1; }
+      - name: Self-test through the tunnel
+        run: |
+          curl -s -m 30 -x http://bore.pub:1234 -o /dev/null -w "lite via tunnel: %{http_code}\n" http://github.com/ || true
+      - name: Stay alive
+        run: |
+          for i in $(seq 1 700); do
+            sleep 30
+            pgrep -f proxy.py >/dev/null || { echo proxy died; tail proxy.log; exit 1; }
+            pgrep -f "bore local 1234" >/dev/null || { echo bore died; tail bore1.log; exit 1; }
+          done
