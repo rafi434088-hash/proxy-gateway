@@ -2,13 +2,17 @@ name: HTTP gateway proxy
 
 on:
   workflow_dispatch:
+    inputs:
+      debug:
+        description: "short diagnostic run (4 min, verbose self-test)"
+        default: "false"
   push:
     branches: [main]
   schedule:
     - cron: "0 */5 * * *"   # a job lasts ~5h50m; the next one queues behind it
 
 concurrency:
-  group: gateway-proxy
+  group: gateway-proxy-${{ github.event.inputs.debug == 'true' && 'debug' || 'main' }}
   cancel-in-progress: false
 
 jobs:
@@ -42,6 +46,7 @@ jobs:
         run: |
           curl -s -m 30 -x http://bore.pub:1234 -o /dev/null -w "lite via tunnel: %{http_code}\n" http://github.com/ || true
       - name: Stay alive
+        if: github.event.inputs.debug != 'true'
         run: |
           for i in $(seq 1 700); do
             sleep 30
