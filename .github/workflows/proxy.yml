@@ -42,9 +42,14 @@ jobs:
           nohup ./bore local 1235 --to bore.pub --port 1235 > bore2.log 2>&1 &
           sleep 6; cat bore1.log bore2.log
           grep -q "bore.pub:1234" bore1.log || { echo "port 1234 not granted"; exit 1; }
-      - name: Self-test through the tunnel
+      - name: Self-test (through the public tunnel)
         run: |
-          curl -s -m 30 -x http://bore.pub:1234 -o /dev/null -w "lite via tunnel: %{http_code}\n" http://github.com/ || true
+          echo "--- root page via tunnel"; curl -s -m 20 http://bore.pub:1234/ | head -c 300; echo
+          echo "--- proxy via tunnel"; curl -s -m 30 -x http://bore.pub:1234 -o /dev/null -w "lite: %{http_code} %{size_download}
+" http://github.com/tsoolgee || true
+          curl -s -m 30 -x http://bore.pub:1235 -o /dev/null -w "plain: %{http_code} %{size_download}
+" http://github.com/tsoolgee || true
+          echo "--- proxy.log"; cat proxy.log; echo "--- bore1.log"; cat bore1.log
       - name: Stay alive
         if: github.event.inputs.debug != 'true'
         run: |
