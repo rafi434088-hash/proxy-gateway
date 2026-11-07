@@ -6,21 +6,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Probe YouTube frontends
+      - name: Probe search engines
         run: |
-          curl -s -m 20 https://api.invidious.io/instances.json -o inst.json || true
-          python3 - <<'PY'
-          import json
-          try:
-              d=json.load(open('inst.json'))
-              hosts=[h for h,i in d if i.get('type')=='https' and i.get('api')][:12]
-          except Exception as e:
-              print('list fail',e); hosts=[]
-          hosts+=['yewtu.be','inv.nadeko.net','invidious.nerdvpn.de','piped.video','pipedapi.kavin.rocks']
-          open('hosts.txt','w').write('\n'.join(dict.fromkeys(hosts)))
-          PY
-          for h in $(cat hosts.txt); do
-            c=$(curl -s -m 15 -o /tmp/s.html -w '%{http_code}' -A 'Mozilla/5.0' "https://$h/search?q=music" || true)
-            n=$(grep -c 'watch?v=' /tmp/s.html 2>/dev/null || true)
-            echo "$h search=$c links=$n"
+          for u in \
+            "https://lite.duckduckgo.com/lite/?q=shabbat" \
+            "https://html.duckduckgo.com/html/?q=shabbat" \
+            "https://www.bing.com/search?q=shabbat" \
+            "https://search.brave.com/search?q=shabbat" \
+            "https://www.mojeek.com/search?q=shabbat" \
+            "https://www.startpage.com/do/search?q=shabbat" \
+            "https://yandex.com/search/?text=shabbat" \
+            "https://www.ecosia.org/search?q=shabbat" \
+            "https://searx.be/search?q=shabbat" \
+            "https://www.google.com/search?q=shabbat&gbv=1" \
+            "https://he.wikipedia.org/w/index.php?search=shabbat" ; do
+            c=$(curl -sL -m 20 -o /tmp/s.html -w '%{http_code} size=%{size_download}' -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120' "$u" || true)
+            t=$(grep -oiE '<title>[^<]{0,60}' /tmp/s.html | head -1 || true)
+            r=$(grep -ciE 'captcha|unusual traffic|are you a human|robot|anomaly' /tmp/s.html || true)
+            echo "RES $u => $c bot=$r $t"
           done
