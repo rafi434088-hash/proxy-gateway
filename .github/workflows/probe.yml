@@ -20,7 +20,7 @@ jobs:
             "https://searx.be/search?q=shabbat" \
             "https://www.google.com/search?q=shabbat&gbv=1" \
             "https://he.wikipedia.org/w/index.php?search=shabbat" ; do
-            c=$(curl -sL -m 20 -o /tmp/s.html -w '%{http_code} size=%{size_download}' -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120' "$u" || true)
+            c=$(curl -sL -m 20 -o /tmp/s.html -w '%{http_code} size=%{size_download} final=%{url_effective}' -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120' "$u" || true)
             t=$(grep -oiE '<title>[^<]{0,60}' /tmp/s.html | head -1 || true)
             r=$(grep -ciE 'captcha|unusual traffic|are you a human|robot|anomaly' /tmp/s.html || true)
             echo "RES $u => $c bot=$r $t"
