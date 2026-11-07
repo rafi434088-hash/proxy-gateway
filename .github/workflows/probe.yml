@@ -1,0 +1,26 @@
+name: probe frontends
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe YouTube frontends
+        run: |
+          curl -s -m 20 https://api.invidious.io/instances.json -o inst.json || true
+          python3 - <<'PY'
+          import json
+          try:
+              d=json.load(open('inst.json'))
+              hosts=[h for h,i in d if i.get('type')=='https' and i.get('api')][:12]
+          except Exception as e:
+              print('list fail',e); hosts=[]
+          hosts+=['yewtu.be','inv.nadeko.net','invidious.nerdvpn.de','piped.video','pipedapi.kavin.rocks']
+          open('hosts.txt','w').write('\n'.join(dict.fromkeys(hosts)))
+          PY
+          for h in $(cat hosts.txt); do
+            c=$(curl -s -m 15 -o /tmp/s.html -w '%{http_code}' -A 'Mozilla/5.0' "https://$h/search?q=music")
+            n=$(grep -c 'watch?v=' /tmp/s.html 2>/dev/null)
+            echo "$h search=$c links=$n"
+          done
