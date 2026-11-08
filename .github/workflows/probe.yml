@@ -4,13 +4,15 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Probe Israeli news
+      - name: Probe kore
         run: |
-          for h in www.ynet.co.il www.mako.co.il www.walla.co.il www.maariv.co.il www.israelhayom.co.il www.kikar.co.il www.bhol.co.il www.haaretz.co.il www.kan.org.il www.srugim.co.il www.jdn.co.il www.hidabroot.org rotter.net www.inn.co.il www.0404.co.il www.davar1.co.il www.kipa.co.il www.bhol.co.il news.walla.co.il www.sport5.co.il www.one.co.il www.globes.co.il www.calcalist.co.il www.themarker.com www.timesofisrael.com www.jpost.com www.i24news.tv www.ice.co.il www.makorrishon.co.il www.mynet.co.il www.haboker.co.il www.103fm.maariv.co.il www.bechadrey.co.il www.col.org.il www.kol-barama.co.il www.kol.co.il www.shabbat.org.il ; do
-            c=$(curl -sL -m 15 -o /tmp/s.html -w '%{http_code} size=%{size_download} final=%{url_effective}' -A 'Mozilla/5.0 (Windows NT 5.1) Opera/9.80' "http://$h/" || true)
-            a=$(grep -oiE '<a [^>]*href' /tmp/s.html | wc -l || true)
+          for h in www.kore.co.il kore.co.il; do
+            curl -s -m 15 -o /dev/null -D - "http://$h/" | head -8 | sed "s/^/RES $h hdr: /" || true
+            c=$(curl -sL -m 15 -o /tmp/s.html -w '%{http_code} size=%{size_download} final=%{url_effective}' -A 'Mozilla/5.0' "http://$h/" || true)
             he=$(grep -oP '[א-ת]{3,}' /tmp/s.html | wc -l || true)
-            echo "RES $h => $c links=$a hebrew=$he"
+            js=$(grep -ci '<script' /tmp/s.html || true)
+            t=$(grep -oiE '<title>[^<]{0,80}' /tmp/s.html | head -1 || true)
+            echo "RES $h => $c hebrew=$he scripts=$js $t"
           done
